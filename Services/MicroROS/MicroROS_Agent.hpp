@@ -12,6 +12,14 @@
 #include <type_traits>
 #include <utility>
 
+#include <FreeRTOS_POSIX.h>
+#include <FreeRTOS_POSIX/pthread.h>
+#include <FreeRTOS_POSIX/unistd.h>
+
+#ifndef MICROROS_NODE_NAME
+#define MICROROS_NODE_NAME "FineMote"
+#endif
+
 #include <rcl/rcl.h>
 #include <rclc/executor.h>
 #include <rclc/rclc.h>
@@ -19,22 +27,35 @@
 
 #include "MicroROS/MicroROS_MessageTypes.hpp"
 
-#ifndef MICROROS_NODE_NAME
-#define MICROROS_NODE_NAME "FineMote"
-#endif
+template <typename = void>
+struct posix_ready : std::false_type {};
 
+template <>
+struct posix_ready<std::void_t<
+    decltype(::pthread_create(std::declval<pthread_t*>(),std::declval<const pthread_attr_t*>(),std::declval<void*(*)(void*)>(),std::declval<void*>())),
+    decltype(::clock_gettime(0, std::declval<struct timespec*>())),
+    decltype(::usleep(0u)),
+    decltype(::sleep(0u))
+>> : std::true_type {};
 
-template <bool enable = true>
+inline constexpr bool microros_supported = posix_ready<>::value;
+
+template <typename = void>
 class MicroROS_Manager;
 
-template <bool enable = true>
+template <typename = void>
 class ROSAgent
 {
+    static_assert(microros_supported,
+        "This BSP lacks a POSIX compatibility layer. Link a POSIX library (e.g. FreeRTOS-POSIX) and ensure its headers are in the include path."
+    );
+};
+
+template <>
+class ROSAgent<std::enable_if_t<microros_supported>>
+{
 public:
-    ROSAgent()
-    {
-        MicroROS_Manager<enable>::GetInstance().RegisterAgent(this);
-    }
+    ROSAgent();
 
     virtual bool Init(rcl_node_t* node, rclc_support_t* support, rclc_executor_t* executor) = 0;
     virtual void Execute() = 0;
