@@ -7,6 +7,8 @@
 #ifndef FINEMOTE_MICROROS_MANAGER_HPP
 #define FINEMOTE_MICROROS_MANAGER_HPP
 
+#if WITH_MICRO_ROS
+
 #include "Board.h"
 #include "etl/list.h"
 
@@ -211,5 +213,11 @@ inline ROSAgent<std::enable_if_t<microros_supported>>::ROSAgent()
 {
     MicroROS_Manager<>::GetInstance().RegisterAgent(this);
 }
+
+#else  // !WITH_MICRO_ROS
+
+#include "MicroROS_Agent.hpp"
+
+#endif  // WITH_MICRO_ROS
 
 #endif

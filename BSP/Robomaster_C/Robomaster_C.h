@@ -100,7 +100,7 @@ extern SPI_WITH_DMA_t spiWithDMA;
 /**
  * MICRO_ROS Definitions
  */
-static constexpr bool WITH_MICRO_ROS = true;
+#define WITH_MICRO_ROS 1
 static constexpr size_t MICRO_ROS_UART_ID = 1;  // BSP_UARTList[1] = &huart6
 
 #endif

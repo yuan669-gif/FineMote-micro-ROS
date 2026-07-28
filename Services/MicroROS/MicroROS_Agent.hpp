@@ -12,6 +12,10 @@
 #include <type_traits>
 #include <utility>
 
+#include "MicroROS/MicroROS_MessageTypes.hpp"
+
+#if WITH_MICRO_ROS
+
 #include <FreeRTOS_POSIX.h>
 #include <FreeRTOS_POSIX/pthread.h>
 #include <FreeRTOS_POSIX/unistd.h>
@@ -24,8 +28,6 @@
 #include <rclc/executor.h>
 #include <rclc/rclc.h>
 #include <rmw_microros/rmw_microros.h>
-
-#include "MicroROS/MicroROS_MessageTypes.hpp"
 
 template <typename = void>
 struct posix_ready : std::false_type {};
@@ -226,5 +228,39 @@ private:
 
 template <typename FuncT>
 RosSubscriber(const char*, FuncT&&) -> RosSubscriber<callback_message_type_t<FuncT>>;
+
+#else  // !WITH_MICRO_ROS
+
+inline constexpr bool microros_supported = false;
+
+template <typename MsgT>
+class RosPublisher
+{
+public:
+    template <typename... Args>
+    RosPublisher(Args&&...) {
+        static_assert(microros_supported,
+            "MicroROS is disabled (WITH_MICRO_ROS=0). Set WITH_MICRO_ROS=1 in your BSP header to enable it."
+        );
+    }
+};
+template <typename... Args>
+RosPublisher(Args&&...) -> RosPublisher<char>;
+
+template <typename MsgT>
+class RosSubscriber
+{
+public:
+    template <typename... Args>
+    RosSubscriber(Args&&...) {
+        static_assert(microros_supported,
+            "MicroROS is disabled (WITH_MICRO_ROS=0). Set WITH_MICRO_ROS=1 in your BSP header to enable it."
+        );
+    }
+};
+template <typename... Args>
+RosSubscriber(Args&&...) -> RosSubscriber<char>;
+
+#endif  // WITH_MICRO_ROS
 
 #endif
