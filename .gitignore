@@ -37,3 +37,7 @@ RTE_Components.h
 *.bat
 *.Bak
 *.__i
+
+# Local URDF experiments
+.dsh_urdf_probe/
+.dsh_probe.txt

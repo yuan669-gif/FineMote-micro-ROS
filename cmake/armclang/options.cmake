@@ -35,8 +35,13 @@ macro(finemote_toolchain)
             ${_FINEMOTE_SECTION_FLAGS}
     )
 
+    # URDF limits use C++20 structural template parameters. CMake has no
+    # compile-feature table for armclang, so pass its language standard explicitly.
+    set(_FINEMOTE_CXX_STANDARD_FLAGS -std=c++20)
+
     set(CMAKE_C_FLAGS_INIT "${CMAKE_C_FLAGS_INIT} ${_FINEMOTE_COMMON_FLAGS_STRING}")
-    set(CMAKE_CXX_FLAGS_INIT "${CMAKE_CXX_FLAGS_INIT} ${_FINEMOTE_COMMON_FLAGS_STRING}")
+    set(CMAKE_CXX_FLAGS_INIT
+            "${CMAKE_CXX_FLAGS_INIT} ${_FINEMOTE_COMMON_FLAGS_STRING} ${_FINEMOTE_CXX_STANDARD_FLAGS}")
     set(CMAKE_ASM_FLAGS_INIT "${CMAKE_ASM_FLAGS_INIT} ${_FINEMOTE_ARCH_FLAGS_STRING} -masm=auto")
 
     # startup file
