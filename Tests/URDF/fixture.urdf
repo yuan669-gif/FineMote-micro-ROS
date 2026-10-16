@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<robot name="fixture">
+  <!-- A delimiter collision inside valid XML: )URDF" -->
+  <link name="root"/>
+</robot>

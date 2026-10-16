@@ -1,0 +1,277 @@
+<?xml version="1.0"?>
+<!--
+  fineurdf 演示用 URDF：四舵轮（swerve）底盘，对应 FineMote 的 POV_Chassis 示例。
+  这是配置解析示例，尚未替代 TaskPOVChassis.cpp 的手写部件。
+  几何使用 URDF 坐标系（X 向前，Y 向左），单位为米、弧度。
+  wheel_radius 与 zero_position 是 FineMote 扩展参数：半径单位为米，
+  舵向标定单位为度，不能由关节原点的位置推断。
+-->
+<robot name="finemote_pov_chassis">
+
+  <!-- ============================ links ============================ -->
+  <link name="base_link">
+    <inertial>
+      <mass value="1.85"/>
+    </inertial>
+  </link>
+
+  <!-- 四个舵轮模块：模块中心相对 base_link 的位置 = (lx, ly) -->
+  <link name="steer_link_FR"/>
+  <link name="wheel_link_FR"/>
+  <link name="steer_link_FL"/>
+  <link name="wheel_link_FL"/>
+  <link name="steer_link_BL"/>
+  <link name="wheel_link_BL"/>
+  <link name="steer_link_BR"/>
+  <link name="wheel_link_BR"/>
+
+  <!-- ============================ joints ============================ -->
+  <!-- 舵向关节：continuous，绕 z 轴。origin = 模块中心。 -->
+  <joint name="steer_joint_FR" type="continuous">
+    <parent link="base_link"/>
+    <child link="steer_link_FR"/>
+    <origin xyz="0.12 -0.12 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="3.0" velocity="12.0"/>
+  </joint>
+  <!-- 轮向关节：continuous，绕 y 轴（轮子绕自身轴心转）。
+       origin 相对 steer_link = 轮子在模块坐标系下的偏移，与轮半径无关。 -->
+  <joint name="wheel_joint_FR" type="continuous">
+    <parent link="steer_link_FR"/>
+    <child link="wheel_link_FR"/>
+    <origin xyz="0.02415 0 0.02415" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="1.5" velocity="90.0"/>
+  </joint>
+
+  <joint name="steer_joint_FL" type="continuous">
+    <parent link="base_link"/>
+    <child link="steer_link_FL"/>
+    <origin xyz="0.12 0.12 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="3.0" velocity="12.0"/>
+  </joint>
+  <joint name="wheel_joint_FL" type="continuous">
+    <parent link="steer_link_FL"/>
+    <child link="wheel_link_FL"/>
+    <origin xyz="0.02415 0 0.02415" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="1.5" velocity="90.0"/>
+  </joint>
+
+  <joint name="steer_joint_BL" type="continuous">
+    <parent link="base_link"/>
+    <child link="steer_link_BL"/>
+    <origin xyz="-0.12 0.12 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="3.0" velocity="12.0"/>
+  </joint>
+  <joint name="wheel_joint_BL" type="continuous">
+    <parent link="steer_link_BL"/>
+    <child link="wheel_link_BL"/>
+    <origin xyz="0.02415 0 0.02415" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="1.5" velocity="90.0"/>
+  </joint>
+
+  <joint name="steer_joint_BR" type="continuous">
+    <parent link="base_link"/>
+    <child link="steer_link_BR"/>
+    <origin xyz="-0.12 -0.12 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="3.0" velocity="12.0"/>
+  </joint>
+  <joint name="wheel_joint_BR" type="continuous">
+    <parent link="steer_link_BR"/>
+    <child link="wheel_link_BR"/>
+    <origin xyz="0.02415 0 0.02415" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="1.5" velocity="90.0"/>
+  </joint>
+
+  <!-- ========================= transmissions ========================= -->
+  <!-- 老式 ROS1 风格 transmission：给出减速比与执行器名。ros2_control 仍会读取它，
+       我们的适配层用它把「关节侧量」换算成「电机侧量」。 -->
+  <transmission name="steer_trans_FR">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="steer_joint_FR">
+      <mechanical_reduction>1.0</mechanical_reduction>
+    </joint>
+    <actuator name="steer_motor_FR"/>
+  </transmission>
+  <transmission name="wheel_trans_FR">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="wheel_joint_FR">
+      <mechanical_reduction>1.0</mechanical_reduction>
+    </joint>
+    <actuator name="wheel_motor_FR"/>
+  </transmission>
+  <transmission name="steer_trans_FL">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="steer_joint_FL">
+      <mechanical_reduction>1.0</mechanical_reduction>
+    </joint>
+    <actuator name="steer_motor_FL"/>
+  </transmission>
+  <transmission name="wheel_trans_FL">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="wheel_joint_FL">
+      <mechanical_reduction>1.0</mechanical_reduction>
+    </joint>
+    <actuator name="wheel_motor_FL"/>
+  </transmission>
+  <transmission name="steer_trans_BL">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="steer_joint_BL">
+      <mechanical_reduction>1.0</mechanical_reduction>
+    </joint>
+    <actuator name="steer_motor_BL"/>
+  </transmission>
+  <transmission name="wheel_trans_BL">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="wheel_joint_BL">
+      <mechanical_reduction>1.0</mechanical_reduction>
+    </joint>
+    <actuator name="wheel_motor_BL"/>
+  </transmission>
+  <transmission name="steer_trans_BR">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="steer_joint_BR">
+      <mechanical_reduction>1.0</mechanical_reduction>
+    </joint>
+    <actuator name="steer_motor_BR"/>
+  </transmission>
+  <transmission name="wheel_trans_BR">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="wheel_joint_BR">
+      <mechanical_reduction>1.0</mechanical_reduction>
+    </joint>
+    <actuator name="wheel_motor_BR"/>
+  </transmission>
+
+  <!-- ========================= ros2_control ========================= -->
+  <!-- 一个 hardware component：4 个舵向 + 4 个轮向，共 8 个关节，挂在一条 CAN 总线上。 -->
+  <ros2_control name="FineMoteSwerveSystem" type="system">
+    <hardware>
+      <plugin>finemote_hardware/FineMoteSystem</plugin>
+      <param name="can_bus">can1</param>
+      <param name="control_period_us">1000</param>
+      <param name="device_kind">C620</param>
+    </hardware>
+
+    <!-- 舵向：位置控制，直接位置模式（DIRECT_POSITION，多圈同位置） -->
+    <joint name="steer_joint_FR">
+      <param name="can_id">0x01</param>
+      <param name="zero_position">180</param>
+      <param name="motor_kind">4315</param>
+      <param name="control_type">position</param>
+      <param name="target_type">position</param>
+      <param name="multi_turn_same_position">true</param>
+      <param name="division_factor">2</param>
+      <param name="pid">1.2 0.0 0.05</param>
+      <command_interface name="position"/>
+      <state_interface name="position">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="steer_joint_FL">
+      <param name="can_id">0x02</param>
+      <param name="zero_position">0</param>
+      <param name="motor_kind">4315</param>
+      <param name="control_type">position</param>
+      <param name="target_type">position</param>
+      <param name="multi_turn_same_position">true</param>
+      <param name="division_factor">2</param>
+      <param name="pid">1.2 0.0 0.05</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="steer_joint_BL">
+      <param name="can_id">0x03</param>
+      <param name="zero_position">0</param>
+      <param name="motor_kind">4315</param>
+      <param name="control_type">position</param>
+      <param name="target_type">position</param>
+      <param name="multi_turn_same_position">true</param>
+      <param name="division_factor">2</param>
+      <param name="pid">1.2 0.0 0.05</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="steer_joint_BR">
+      <param name="can_id">0x04</param>
+      <param name="zero_position">180</param>
+      <param name="motor_kind">4315</param>
+      <param name="control_type">position</param>
+      <param name="target_type">position</param>
+      <param name="multi_turn_same_position">true</param>
+      <param name="division_factor">2</param>
+      <param name="pid">1.2 0.0 0.05</param>
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+
+    <!-- 轮向：速度控制，力矩环->速度环级联（TORQUE_2_SPEED） -->
+    <joint name="wheel_joint_FR">
+      <param name="can_id">0x141</param>
+      <param name="wheel_radius">0.02415</param>
+      <param name="motor_kind">4010</param>
+      <param name="control_type">torque</param>
+      <param name="target_type">speed</param>
+      <param name="division_factor">1</param>
+      <param name="pid">0.23 0.008 0.3</param>
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="wheel_joint_FL">
+      <param name="can_id">0x142</param>
+      <param name="wheel_radius">0.02415</param>
+      <param name="motor_kind">4010</param>
+      <param name="control_type">torque</param>
+      <param name="target_type">speed</param>
+      <param name="division_factor">1</param>
+      <param name="pid">0.23 0.008 0.3</param>
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="wheel_joint_BL">
+      <param name="can_id">0x143</param>
+      <param name="wheel_radius">0.02415</param>
+      <param name="motor_kind">4010</param>
+      <param name="control_type">torque</param>
+      <param name="target_type">speed</param>
+      <param name="division_factor">1</param>
+      <param name="pid">0.23 0.008 0.3</param>
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="wheel_joint_BR">
+      <param name="can_id">0x144</param>
+      <param name="wheel_radius">0.02415</param>
+      <param name="motor_kind">4010</param>
+      <param name="control_type">torque</param>
+      <param name="target_type">speed</param>
+      <param name="division_factor">1</param>
+      <param name="pid">0.23 0.008 0.3</param>
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+  </ros2_control>
+
+</robot>
