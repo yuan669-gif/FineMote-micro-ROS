@@ -108,6 +108,9 @@ void DeviceScheduler::Start() {
         if (pthread_attr_init(&attr) != 0) {
             Error_Handler();
         }
+#ifdef FINEMOTE_AST_APPLICATION
+        if (bucket.period == 1 && pthread_attr_setstacksize(&attr, 6144) != 0) Error_Handler();
+#endif
 
         if (pthread_attr_setschedparam(&attr, &param) != 0) {
             Error_Handler();

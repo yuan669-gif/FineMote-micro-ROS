@@ -42,6 +42,24 @@
       ]
     },
     {
+      "name": "ast-device-MC_Board",
+      "hidden": true,
+      "cacheVariables": {
+        "FINEMOTE_REFLECTED_URDF": "${sourceDir}/Interface/Examples/URDF/pov_simple.urdf",
+        "FINEMOTE_CONTROLLERS_YAML": "${sourceDir}/Interface/Examples/URDF/pov_controllers.yaml",
+        "ENABLE_EIGEN": false,
+        "ENABLE_BLASFEO": false
+      }
+    },
+    {
+      "name": "ast-MC_Board-debug",
+      "inherits": ["ast-device-MC_Board", "arm-none-eabi-gcc-MC_Board-debug"]
+    },
+    {
+      "name": "ast-MC_Board-release",
+      "inherits": ["ast-device-MC_Board", "arm-none-eabi-gcc-MC_Board-release"]
+    },
+    {
       "name": "armclang-MC_Board-debug",
       "displayName": "ArmClang / MC_Board / Debug",
       "inherits": [

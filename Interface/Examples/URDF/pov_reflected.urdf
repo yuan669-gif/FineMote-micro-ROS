@@ -1,0 +1,293 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="pov_reflected">
+  <link name="base_link">
+    <inertial>
+      <mass value="1.85" />
+    </inertial>
+  </link>
+  <link name="steer_link_FR" />
+  <link name="wheel_link_FR" />
+  <link name="steer_link_FL" />
+  <link name="wheel_link_FL" />
+  <link name="steer_link_BL" />
+  <link name="wheel_link_BL" />
+  <link name="steer_link_BR" />
+  <link name="wheel_link_BR" />
+  <joint name="steer_joint_FR" type="continuous">
+    <parent link="base_link" />
+    <child link="steer_link_FR" />
+    <origin xyz="0.1201125 -0.12 0" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+    <limit effort="3.0" velocity="12.0" />
+  </joint>
+  <joint name="wheel_joint_FR" type="continuous">
+    <parent link="steer_link_FR" />
+    <child link="wheel_link_FR" />
+    <origin xyz="0.02415 0 0.02415" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+    <limit effort="1.5" velocity="90.0" />
+  </joint>
+  <joint name="steer_joint_FL" type="continuous">
+    <parent link="base_link" />
+    <child link="steer_link_FL" />
+    <origin xyz="0.1201125 0.12 0" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+    <limit effort="3.0" velocity="12.0" />
+  </joint>
+  <joint name="wheel_joint_FL" type="continuous">
+    <parent link="steer_link_FL" />
+    <child link="wheel_link_FL" />
+    <origin xyz="0.02415 0 0.02415" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+    <limit effort="1.5" velocity="90.0" />
+  </joint>
+  <joint name="steer_joint_BL" type="continuous">
+    <parent link="base_link" />
+    <child link="steer_link_BL" />
+    <origin xyz="-0.1201125 0.12 0" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+    <limit effort="3.0" velocity="12.0" />
+  </joint>
+  <joint name="wheel_joint_BL" type="continuous">
+    <parent link="steer_link_BL" />
+    <child link="wheel_link_BL" />
+    <origin xyz="0.02415 0 0.02415" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+    <limit effort="1.5" velocity="90.0" />
+  </joint>
+  <joint name="steer_joint_BR" type="continuous">
+    <parent link="base_link" />
+    <child link="steer_link_BR" />
+    <origin xyz="-0.1201125 -0.12 0" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+    <limit effort="3.0" velocity="12.0" />
+  </joint>
+  <joint name="wheel_joint_BR" type="continuous">
+    <parent link="steer_link_BR" />
+    <child link="wheel_link_BR" />
+    <origin xyz="0.02415 0 0.02415" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+    <limit effort="1.5" velocity="90.0" />
+  </joint>
+  <finemote_cpp version="1">
+    <include header="URDF/POVInterfaces.hpp" />
+    <object id="chassis" factory="POV_ChassisBuilder">
+      <template name="OdomPolicy" type="PlanarOdom" />
+      <arg name="_wheelDiameter" value="0.0483f" />
+      <arg name="configs">
+        <aggregate type="Swerve_t">
+          <field name="steerMotor" ref="SFRMotor" address="true" />
+          <field name="driveMotor" ref="CFRMotor" address="true" />
+          <field name="lx" joint="steer_joint_FR" coordinate="x" />
+          <field name="ly" joint="steer_joint_FR" coordinate="y" />
+          <field name="zeroPosition" value="180" />
+        </aggregate>
+      </arg>
+      <arg name="configs">
+        <aggregate type="Swerve_t">
+          <field name="steerMotor" ref="SFLMotor" address="true" />
+          <field name="driveMotor" ref="CFLMotor" address="true" />
+          <field name="lx" joint="steer_joint_FL" coordinate="x" />
+          <field name="ly" joint="steer_joint_FL" coordinate="y" />
+        </aggregate>
+      </arg>
+      <arg name="configs">
+        <aggregate type="Swerve_t">
+          <field name="steerMotor" ref="SBLMotor" address="true" />
+          <field name="driveMotor" ref="CBLMotor" address="true" />
+          <field name="lx" joint="steer_joint_BL" coordinate="x" />
+          <field name="ly" joint="steer_joint_BL" coordinate="y" />
+        </aggregate>
+      </arg>
+      <arg name="configs">
+        <aggregate type="Swerve_t">
+          <field name="steerMotor" ref="SBRMotor" address="true" />
+          <field name="driveMotor" ref="CBRMotor" address="true" />
+          <field name="lx" joint="steer_joint_BR" coordinate="x" />
+          <field name="ly" joint="steer_joint_BR" coordinate="y" />
+          <field name="zeroPosition" value="180" />
+        </aggregate>
+      </arg>
+    </object>
+    <object id="CBRMotor" type="Motor4010">
+      <template name="busID" value="1" />
+      <arg name="params">
+        <aggregate>
+          <field name="ctrlType" value="Motor_Ctrl_Type_e::Torque" />
+          <field name="targetType" value="Motor_Ctrl_Type_e::Speed" />
+        </aggregate>
+      </arg>
+      <arg name="_controller" ref="wheel_BR" />
+      <arg name="addr" value="0x144" />
+    </object>
+    <object id="SBRMotor" type="Motor4315">
+      <template name="BusID" value="1" />
+      <arg name="params">
+        <aggregate>
+          <field name="ctrlType" value="Motor_Ctrl_Type_e::Position" />
+          <field name="targetType" value="Motor_Ctrl_Type_e::Position" />
+          <field name="multiTurnSamePosition" value="true" />
+        </aggregate>
+      </arg>
+      <arg name="_controller" ref="steer_BR" />
+      <arg name="addr" value="0x04" />
+      <arg name="divisionFactor" value="20" />
+    </object>
+    <object id="wheel_BR" type="PID">
+      <arg name="params">
+        <aggregate>
+          <field name="kp" value="0.23f" />
+          <field name="ki" value="0.008f" />
+          <field name="kd" value="0.3f" />
+        </aggregate>
+      </arg>
+    </object>
+    <object id="steer_BR" type="Amplifier">
+      <template name="K" value="1" />
+    </object>
+    <object id="CBLMotor" type="Motor4010">
+      <template name="busID" value="1" />
+      <arg name="params">
+        <aggregate>
+          <field name="ctrlType" value="Motor_Ctrl_Type_e::Torque" />
+          <field name="targetType" value="Motor_Ctrl_Type_e::Speed" />
+        </aggregate>
+      </arg>
+      <arg name="_controller" ref="wheel_BL" />
+      <arg name="addr" value="0x143" />
+    </object>
+    <object id="SBLMotor" type="Motor4315">
+      <template name="BusID" value="1" />
+      <arg name="params">
+        <aggregate>
+          <field name="ctrlType" value="Motor_Ctrl_Type_e::Position" />
+          <field name="targetType" value="Motor_Ctrl_Type_e::Position" />
+          <field name="multiTurnSamePosition" value="true" />
+        </aggregate>
+      </arg>
+      <arg name="_controller" ref="steer_BL" />
+      <arg name="addr" value="0x03" />
+      <arg name="divisionFactor" value="20" />
+    </object>
+    <object id="wheel_BL" type="PID">
+      <arg name="params">
+        <aggregate>
+          <field name="kp" value="0.23f" />
+          <field name="ki" value="0.008f" />
+          <field name="kd" value="0.3f" />
+        </aggregate>
+      </arg>
+    </object>
+    <object id="steer_BL" type="Amplifier">
+      <template name="K" value="1" />
+    </object>
+    <object id="CFLMotor" type="Motor4010">
+      <template name="busID" value="1" />
+      <arg name="params">
+        <aggregate>
+          <field name="ctrlType" value="Motor_Ctrl_Type_e::Torque" />
+          <field name="targetType" value="Motor_Ctrl_Type_e::Speed" />
+        </aggregate>
+      </arg>
+      <arg name="_controller" ref="wheel_FL" />
+      <arg name="addr" value="0x142" />
+    </object>
+    <object id="SFLMotor" type="Motor4315">
+      <template name="BusID" value="1" />
+      <arg name="params">
+        <aggregate>
+          <field name="ctrlType" value="Motor_Ctrl_Type_e::Position" />
+          <field name="targetType" value="Motor_Ctrl_Type_e::Position" />
+          <field name="multiTurnSamePosition" value="true" />
+        </aggregate>
+      </arg>
+      <arg name="_controller" ref="steer_FL" />
+      <arg name="addr" value="0x02" />
+      <arg name="divisionFactor" value="20" />
+    </object>
+    <object id="wheel_FL" type="PID">
+      <arg name="params">
+        <aggregate>
+          <field name="kp" value="0.23f" />
+          <field name="ki" value="0.008f" />
+          <field name="kd" value="0.3f" />
+        </aggregate>
+      </arg>
+    </object>
+    <object id="steer_FL" type="Amplifier">
+      <template name="K" value="1" />
+    </object>
+    <object id="CFRMotor" type="Motor4010">
+      <template name="busID" value="1" />
+      <arg name="params">
+        <aggregate>
+          <field name="ctrlType" value="Motor_Ctrl_Type_e::Torque" />
+          <field name="targetType" value="Motor_Ctrl_Type_e::Speed" />
+        </aggregate>
+      </arg>
+      <arg name="_controller" ref="wheel_FR" />
+      <arg name="addr" value="0x141" />
+    </object>
+    <object id="SFRMotor" type="Motor4315">
+      <template name="BusID" value="1" />
+      <arg name="params">
+        <aggregate>
+          <field name="ctrlType" value="Motor_Ctrl_Type_e::Position" />
+          <field name="targetType" value="Motor_Ctrl_Type_e::Position" />
+          <field name="multiTurnSamePosition" value="true" />
+        </aggregate>
+      </arg>
+      <arg name="_controller" ref="steer_FR" />
+      <arg name="addr" value="0x01" />
+      <arg name="divisionFactor" value="20" />
+    </object>
+    <object id="wheel_FR" type="PID">
+      <arg name="params">
+        <aggregate>
+          <field name="kp" value="0.23f" />
+          <field name="ki" value="0.008f" />
+          <field name="kd" value="0.3f" />
+        </aggregate>
+      </arg>
+    </object>
+    <object id="steer_FR" type="Amplifier">
+      <template name="K" value="1" />
+    </object>
+    <object id="remote" type="RadioMaster_Zorro" />
+    <object id="uart3Buffer" type="UARTBuffer">
+      <template name="ID" value="3" />
+      <template name="N" value="200" />
+      <arg name="decodeCallback">
+        <call function="finemote_urdf::decode">
+          <arg name="remote" ref="remote" />
+        </call>
+      </arg>
+    </object>
+    <object id="pub_chassis_twist" type="RosPublisher">
+      <arg name="obj_name" value="&quot;chassis&quot;" />
+      <arg name="obj" ref="chassis" />
+    </object>
+    <value id="count" type="int32_t" value="0" />
+    <object id="pub_hb" type="RosPublisher">
+      <arg name="base_name" value="&quot;heartbeat&quot;" />
+      <arg name="func">
+        <call function="finemote_urdf::heartbeat">
+          <arg name="count" ref="count" />
+        </call>
+      </arg>
+    </object>
+    <object id="sub_led" type="RosSubscriber">
+      <arg name="base_name" value="&quot;cmd/led&quot;" />
+      <arg name="callback">
+        <call function="finemote_urdf::led" />
+      </arg>
+    </object>
+    <object id="remote_task" type="finemote_urdf::ZorroVelocityTask">
+      <arg name="chassis" ref="chassis" />
+      <arg name="remote" ref="remote" />
+      <arg name="linear_scale" value="2.0f" />
+      <arg name="angular_scale" value="3.14159265358979323846f" />
+    </object>
+    <task name="TaskPOVChassis" object="remote_task" method="Run" />
+  </finemote_cpp>
+</robot>

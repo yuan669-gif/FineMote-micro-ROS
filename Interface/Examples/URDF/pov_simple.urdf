@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FineMote AST 设备描述示例：与 pov_controllers.yaml 一起用于构建固件。
+     motor 描述设备；joint/bus 描述设备连接。
+     PID、Amplifier 及电机调度分频由同目录 pov_controllers.yaml 按 joint 名称配置。
+     本草案约定等价圈位置处理默认开启，暂不提供 XML/YAML 字段。
+     现有 C++ 参数默认仍为 false；后续生成器需落实该约定，不能直接省略构造值。
+     micro-ROS 的传输和接口约定由 FineMote 内部管理，不在 URDF 配置。
+     MC_Board 的基础 tick 为 1 ms；YAML 分频 1/20 对应轮电机 1 ms、舵电机 20 ms。
+     底盘周期暂沿用内部默认值 1 ms，不由电机控制器的分频设置。
+     PID 保留原离散周期和度/DPS语义，每个电机拥有独立控制器实例。
+     拟定控制流：micro-ROS 底盘速度输入 -> POV -> 关节目标 -> 电机控制器；
+     按对象分别发布：8 个 joint 各一个 JointState 发布器，包含该 joint 声明的
+     position/velocity 状态；不创建汇总所有 joint 的发布器。
+     chassis 的 velocity 状态生成一个 Twist 发布器，velocity 命令生成一个
+     Twist 订阅器。joint 的命令接口供底盘内部写入，不生成额外电机命令订阅器。
+     本例共需 9 个发布器、1 个订阅器，即 10 个 FineMote ROSAgent 和 1 个
+     executor 订阅句柄；不含其他任务额外创建的 ROS 对象。
+     默认话题/消息协议及超时停车行为仍需实现。 -->
+<robot name="pov_chassis">
+  <link name="base_link"/>
+  <link name="steer_link_FR"/>
+  <link name="wheel_link_FR"/>
+  <link name="steer_link_FL"/>
+  <link name="wheel_link_FL"/>
+  <link name="steer_link_BL"/>
+  <link name="wheel_link_BL"/>
+  <link name="steer_link_BR"/>
+  <link name="wheel_link_BR"/>
+
+  <!-- 机械结构 -->
+  <joint name="steer_joint_FR" type="continuous">
+    <parent link="base_link"/>
+    <child link="steer_link_FR"/>
+    <origin xyz="0.1201125 -0.12 0"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="3.0" velocity="12.0"/>
+  </joint>
+  <joint name="wheel_joint_FR" type="continuous">
+    <parent link="steer_link_FR"/>
+    <child link="wheel_link_FR"/>
+    <origin xyz="0.02415 0 0.02415"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="1.5" velocity="90.0"/>
+  </joint>
+
+  <joint name="steer_joint_FL" type="continuous">
+    <parent link="base_link"/>
+    <child link="steer_link_FL"/>
+    <origin xyz="0.1201125 0.12 0"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="3.0" velocity="12.0"/>
+  </joint>
+  <joint name="wheel_joint_FL" type="continuous">
+    <parent link="steer_link_FL"/>
+    <child link="wheel_link_FL"/>
+    <origin xyz="0.02415 0 0.02415"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="1.5" velocity="90.0"/>
+  </joint>
+
+  <joint name="steer_joint_BL" type="continuous">
+    <parent link="base_link"/>
+    <child link="steer_link_BL"/>
+    <origin xyz="-0.1201125 0.12 0"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="3.0" velocity="12.0"/>
+  </joint>
+  <joint name="wheel_joint_BL" type="continuous">
+    <parent link="steer_link_BL"/>
+    <child link="wheel_link_BL"/>
+    <origin xyz="0.02415 0 0.02415"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="1.5" velocity="90.0"/>
+  </joint>
+
+  <joint name="steer_joint_BR" type="continuous">
+    <parent link="base_link"/>
+    <child link="steer_link_BR"/>
+    <origin xyz="-0.1201125 -0.12 0"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="3.0" velocity="12.0"/>
+  </joint>
+  <joint name="wheel_joint_BR" type="continuous">
+    <parent link="steer_link_BR"/>
+    <child link="wheel_link_BR"/>
+    <origin xyz="0.02415 0 0.02415"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="1.5" velocity="90.0"/>
+  </joint>
+
+  <ros2_control name="pov" type="system">
+    <joint name="wheel_joint_FR">
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <bus type="can">
+        <param name="port">1</param>
+        <param name="id">0x141</param>
+      </bus>
+      <motor type="4010"/>
+    </joint>
+    <joint name="wheel_joint_FL">
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <bus type="can">
+        <param name="port">1</param>
+        <param name="id">0x142</param>
+      </bus>
+      <motor type="4010"/>
+    </joint>
+    <joint name="wheel_joint_BL">
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <bus type="can">
+        <param name="port">1</param>
+        <param name="id">0x143</param>
+      </bus>
+      <motor type="4010"/>
+    </joint>
+    <joint name="wheel_joint_BR">
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <bus type="can">
+        <param name="port">1</param>
+        <param name="id">0x144</param>
+      </bus>
+      <motor type="4010"/>
+    </joint>
+
+    <joint name="steer_joint_FR">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <bus type="rs485">
+        <param name="port">1</param>
+        <param name="address">0x01</param>
+      </bus>
+      <motor type="4315"/>
+    </joint>
+    <joint name="steer_joint_FL">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <bus type="rs485">
+        <param name="port">1</param>
+        <param name="address">0x02</param>
+      </bus>
+      <motor type="4315"/>
+    </joint>
+    <joint name="steer_joint_BL">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <bus type="rs485">
+        <param name="port">1</param>
+        <param name="address">0x03</param>
+      </bus>
+      <motor type="4315"/>
+    </joint>
+    <joint name="steer_joint_BR">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <bus type="rs485">
+        <param name="port">1</param>
+        <param name="address">0x04</param>
+      </bus>
+      <motor type="4315"/>
+    </joint>
+
+    <!-- name 是底盘实例名；type=pov 选择 POV_Chassis，odometry=planar 选择 PlanarOdom。
+         轮径单位 m；module 数量决定模板参数 N，通过 joint 名称引用设备。
+         lx/ly 取直接连接 base_link 的 steer joint 的 origin x/y。
+         zero_position 单位 rad，缺省为 0；适配现有 Swerve_t 时转为度。 -->
+    <chassis name="chassis" type="pov">
+      <!-- 底盘 velocity 是 base_link 坐标系下的平面速度 (vx, vy, wz)，
+           单位为 m/s、m/s、rad/s；拟映射到 Twist.linear.x/y、angular.z。
+           发布实际估计速度，订阅目标速度；消息的其余分量限定为零。
+           PlanarOdom 仍在内部运行，本版不另行发布位姿。 -->
+      <command_interface name="velocity"/>
+      <state_interface name="velocity"/>
+
+      <param name="wheel_diameter">0.0483</param>
+      <odometry type="planar"/>
+
+      <module steer="steer_joint_FR" drive="wheel_joint_FR">
+        <param name="zero_position">3.141592653589793</param>
+      </module>
+      <module steer="steer_joint_FL" drive="wheel_joint_FL"/>
+      <module steer="steer_joint_BL" drive="wheel_joint_BL"/>
+      <module steer="steer_joint_BR" drive="wheel_joint_BR">
+        <param name="zero_position">3.141592653589793</param>
+      </module>
+    </chassis>
+  </ros2_control>
+</robot>

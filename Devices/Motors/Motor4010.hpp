@@ -1,0 +1,109 @@
+/*******************************************************************************
+ * Copyright (c) 2024.
+ * IWIN-FINS Lab, Shanghai Jiao Tong University, Shanghai, China.
+ * All rights reserved.
+ ******************************************************************************/
+
+#ifndef FINEMOTE_MOTOR4010_H
+#define FINEMOTE_MOTOR4010_H
+
+#include "Motors/MotorBase.hpp"
+#include "Bus/CAN_Base.hpp"
+#include "Control/Clamp.hpp"
+#include "FreeRTOS.h"
+#include "task.h"
+
+/**
+ * Todo: Reduction ratio
+ */
+template <int busID>
+class Motor4010 : public MotorBase {
+public:
+    template <typename T>
+    Motor4010(const Motor_Param_t&& params, T& _controller, uint32_t addr, uint8_t divisionFactor=1)
+            : MotorBase(std::forward<const Motor_Param_t>(params), divisionFactor), canAgent(addr) {
+        ResetController(_controller);
+    }
+
+    void Handle() final {
+        if (inhibited_.load() && params.ctrlType == Motor_Ctrl_Type_e::Torque) {
+            controller->ResetHistory();
+            canAgent[0] = 0xA1;
+            for (unsigned index = 1; index < 8; ++index) canAgent[index] = 0;
+            canAgent.Transmit(canAgent.addr);
+            return;
+        }
+        SetFeedback();
+        controller->Calc();
+        MessageGenerate();
+    }
+
+    CAN_Agent<busID> canAgent;
+
+private:
+    void SetFeedback() final {
+        auto* s = &state;
+        switch (this->params.targetType) {
+            case Motor_Ctrl_Type_e::Position:
+                controller->SetFeedbacks(&s->position);
+                break;
+            case Motor_Ctrl_Type_e::Speed:
+                controller->SetFeedbacks(&s->speed);
+                break;
+            default:
+                break;
+        }
+    }
+
+    void MessageGenerate() {
+        switch (params.ctrlType) {
+            case Motor_Ctrl_Type_e::Torque: {
+                ControllerOutputData output = controller->GetOutputs();
+                int16_t txTorque = Clamp(1 * output.dataPtr[0], -500.f, 500.f);
+
+                canAgent[0] = 0xA1;
+                canAgent[1] = 0x00;
+                canAgent[2] = 0x00;
+                canAgent[3] = 0x00;
+                canAgent[4] = txTorque;
+                canAgent[5] = txTorque >> 8;
+                canAgent[6] = 0x00;
+                canAgent[7] = 0x00;
+                break;
+            }
+            case Motor_Ctrl_Type_e::Position: {
+                constexpr uint16_t txSpeed = 0x800;
+                ControllerOutputData output = controller->GetOutputs();
+                int32_t txAngle = 100 * output.dataPtr[0];
+
+                canAgent[0] = 0xA4;
+                canAgent[1] = 0x00;
+                canAgent[2] = txSpeed;
+                canAgent[3] = txSpeed >> 8;
+                canAgent[4] = txAngle;
+                canAgent[5] = txAngle >> 8;
+                canAgent[6] = txAngle >> 16;
+                canAgent[7] = txAngle >> 24;
+                break;
+            }
+        }
+        canAgent.Transmit(canAgent.addr);
+    }
+
+    void Update() override {
+        uint8_t sample[8];
+        taskENTER_CRITICAL();
+        const auto length = canAgent.receivedLength;
+        memcpy(sample, canAgent.rxbuf, sizeof(sample));
+        canAgent.receivedLength = 0;
+        taskEXIT_CRITICAL();
+        if (length != 8 || (sample[0] != 0xA1 && sample[0] != 0xA4)) return;
+        Motor_State_t newState;
+        newState.position = static_cast<int16_t>(sample[6] | (sample[7] << 8u)) * 360.0f / 16384.0f;
+        newState.speed = static_cast<int16_t>(sample[4] | (sample[5] << 8u));
+        newState.torque = static_cast<int16_t>(sample[2] | (sample[3] << 8u));
+        CommitState(newState);
+    }
+};
+
+#endif

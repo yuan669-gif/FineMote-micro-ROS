@@ -63,7 +63,11 @@ public:
         uint8_t tempBuf[8];
         FineMote_CAN_HeaderTypeDef Header;
         BSP_CAN<ID>::GetInstance().Receive(&Header, tempBuf);
-        memcpy(rxBufferMap[Header.ID], tempBuf, Header.DLC);
+        auto slot = rxBufferMap.find(Header.ID);
+        if (slot != rxBufferMap.end() && Header.RTR == static_cast<uint8_t>(CAN_RTR_HeaderTypeDef::DATA) && Header.DLC <= 8) {
+            memcpy(slot->second.buffer, tempBuf, Header.DLC);
+            if (slot->second.length) *slot->second.length = Header.DLC;
+        }
     }
 
     void TxHandle() {
@@ -95,12 +99,13 @@ public:
         return true;
     }
 
-    void BindRxBuffer(const uint8_t *buffer, uint32_t addr) {
-        rxBufferMap[addr] = const_cast<uint8_t *>(buffer);
+    void BindRxBuffer(const uint8_t *buffer, uint32_t addr, volatile uint8_t* length = nullptr) {
+        rxBufferMap[addr] = {const_cast<uint8_t *>(buffer), length};
     }
 
 private:
-    etl::map<uint32_t, uint8_t *, CAN_Parameters<ID>::CAN_MAP_SIZE> rxBufferMap;
+    struct RxSlot { uint8_t* buffer; volatile uint8_t* length; };
+    etl::map<uint32_t, RxSlot, CAN_Parameters<ID>::CAN_MAP_SIZE> rxBufferMap;
     etl::queue<CAN_Package_t, CAN_Parameters<ID>::CAN_TX_QUEUE_SIZE> dataQueue;
     bool isTxComplete = true;
 
@@ -114,12 +119,13 @@ class CAN_Agent {
 public:
     explicit CAN_Agent(uint32_t addr) : addr(addr) {
         static_assert(ID > 0 && ID <= CAN_BUS_MAXIMUM_COUNT && BSP_CANList[ID] != nullptr, "Using illegal CAN BUS");
-        CAN_Base<ID>::GetInstance().BindRxBuffer(rxbuf, addr);
+        CAN_Base<ID>::GetInstance().BindRxBuffer(rxbuf, addr, &receivedLength);
     }
 
     void SetDLC(uint8_t DLC) {
         txbuf.DLC = DLC;
     }
+    volatile uint8_t receivedLength = 0;
 
     /**
      * @brief CAN发送队列装填

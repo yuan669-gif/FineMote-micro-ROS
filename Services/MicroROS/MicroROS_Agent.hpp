@@ -58,6 +58,7 @@ public:
     virtual bool Init(rcl_node_t* node, rclc_support_t* support, rclc_executor_t* executor) = 0;
     virtual void Execute() = 0;
     virtual void Fini() = 0;
+    virtual void Disconnected() {}
 };
 
 template<typename T, typename = void>
@@ -161,13 +162,16 @@ public:
     using CallbackFunc = std::function<void(const MsgT&)>;
 
     template<typename FuncT>
-    RosSubscriber(const char* base_name, FuncT&& callback):
+    RosSubscriber(const char* base_name, FuncT&& callback, std::function<void()> disconnected = {}):
+        disconnected_(std::move(disconnected)),
         callback_(std::forward<FuncT>(callback)),
         topic_str_(std::string(MICROROS_NODE_NAME) + "/" + base_name) {}
 
     bool Init(rcl_node_t* node, rclc_support_t*, rclc_executor_t* executor) final {
         const auto* type_support = RosMsgTraits<MsgT>::GetTypeSupport();
-        rcl_ret_t ret = rclc_subscription_init_best_effort(&subscriber_, node, type_support, topic_str_.c_str());
+        auto qos = rmw_qos_profile_sensor_data;
+        if (disconnected_) qos.depth = 1;
+        rcl_ret_t ret = rclc_subscription_init(&subscriber_, node, type_support, topic_str_.c_str(), &qos);
         if (ret != RCL_RET_OK) {
             return false;
         }
@@ -205,6 +209,8 @@ public:
     }
 
 private:
+    void Disconnected() final { if (disconnected_) disconnected_(); }
+    std::function<void()> disconnected_;
     CallbackFunc callback_;
     std::string topic_str_;
     rcl_subscription_t subscriber_ { rcl_get_zero_initialized_subscription() };

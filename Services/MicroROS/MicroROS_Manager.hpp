@@ -38,6 +38,9 @@ public:
         if (registration_open && !agents_.full()) {
             agents_.push_back(agent);
         }
+#ifdef FINEMOTE_AST_APPLICATION
+        else Error_Handler();
+#endif
     }
 
     bool Start(MicroROS_Backend& backend) {
@@ -149,6 +152,9 @@ private:
             return;
         }
         executor_initialized_ = true;
+#ifdef FINEMOTE_AST_APPLICATION
+        (void)rmw_uros_sync_session(100);
+#endif
 
         for (auto* agent: agents_) {
             if (!agent->Init(&node_, &support_, &executor_)) {
@@ -182,6 +188,7 @@ private:
     }
 
     void GotoError() {
+        for (auto* agent : agents_) agent->Disconnected();
         Cleanup();
         state_ = State::ERROR;
     }

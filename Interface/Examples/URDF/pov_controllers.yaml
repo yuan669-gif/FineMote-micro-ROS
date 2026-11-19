@@ -1,0 +1,46 @@
+# FineMote 控制器配置，配套 pov_simple.urdf，在主机构建时解析。
+# 这是 MCU 电机内部控制算法配置，不是可直接加载的 ROS 2 参数文件。
+# 构建时读取 YAML 并生成 C++；不要求 MCU 运行时解析 YAML。
+#
+# 每个 - controller 是一组配置，为所列的每个 joint 构造独立实例，只共享参数。
+# joint 必须存在且只绑定一个电机控制算法；目标量由 URDF command_interface 确定。
+# division_factor 与 parameters 并列，设置绑定电机的设备调度分频，不仅是算法分频。
+# 执行周期 = RTOS 基础 tick 周期 × division_factor；当前电机参数范围为 1～255。
+# 本例 MC_Board 的基础 tick 为 1 ms，轮电机/舵电机分别为 1 ms/20 ms。
+# 配置项的排列不决定设备执行顺序；改变分频需要重新核对 PID 增益。
+# PID 增益沿用现有离散算法和驱动内部度/DPS单位，不能直接套用到 SI 误差。
+#
+# 本例拟定适配规则：
+# 4010 + velocity command + PID -> 速度反馈、MCU PID、驱动 Torque 协议模式。
+# 4315 + position command + Amplifier -> 位置目标缩放、驱动 Position 协议模式。
+# 这些组合由设备适配层明确登记；不允许根据 PID 类名猜测任意设备的输出模式。
+# 原始 Torque 协议值不等同于以 N·m 标定的 effort 接口。
+version: 1
+
+controllers:
+  # 四个轮电机：每个关节使用独立的速度 PID。
+  - controller:
+      type: PID
+      joints:
+        - wheel_joint_FR
+        - wheel_joint_FL
+        - wheel_joint_BL
+        - wheel_joint_BR
+      division_factor: 1
+      parameters:
+        kp: 0.23
+        ki: 0.008
+        kd: 0.3
+
+  # 四个舵电机：位置目标经单位增益传递，位置闭环由电机内部执行。
+  - controller:
+      type: Amplifier
+      joints:
+        - steer_joint_FR
+        - steer_joint_FL
+        - steer_joint_BL
+        - steer_joint_BR
+      division_factor: 20
+      parameters:
+        # 对应现有 Amplifier<K> 的编译期参数，当前 K 的类型是 size_t。
+        gain: 1

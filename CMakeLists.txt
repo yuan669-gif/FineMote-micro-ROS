@@ -2,6 +2,19 @@ cmake_minimum_required(VERSION 3.22)
 
 project(${BOARD_NAME} C CXX ASM)
 
+set(FINEMOTE_REFLECTED_URDF "" CACHE FILEPATH "Build an AST-generated application")
+set(FINEMOTE_CONTROLLERS_YAML "" CACHE FILEPATH "Controller YAML paired with the device URDF")
+if(FINEMOTE_CONTROLLERS_YAML AND NOT FINEMOTE_REFLECTED_URDF)
+    message(FATAL_ERROR "FINEMOTE_CONTROLLERS_YAML requires FINEMOTE_REFLECTED_URDF")
+endif()
+if(FINEMOTE_REFLECTED_URDF)
+    if(NOT BOARD_NAME STREQUAL "MC_Board" OR NOT ENABLE_MICRO_ROS OR NOT FINEMOTE_APPLICATION_OWNER STREQUAL "ROOT")
+        message(FATAL_ERROR "Use the MC_Board AST preset with micro-ROS enabled")
+    endif()
+    set(CMAKE_CXX_EXTENSIONS OFF)
+    add_compile_definitions(FINEMOTE_AST_APPLICATION FINEMOTE_DEVICE_RTOS_HEAP_BYTES=45056)
+endif()
+
 if(FINEMOTE_APPLICATION_OWNER STREQUAL "ROOT")
     add_executable(${PROJECT_NAME}
             ${_FINEMOTE_STARTUP_SOURCE}
@@ -34,6 +47,10 @@ function(add_module module_path)
             "${module_path}/*.cpp"
             "${module_path}/*.s"
     )
+    if(FINEMOTE_REFLECTED_URDF)
+        list(FILTER module_sources EXCLUDE REGEX "/Interface/(Examples|UserTasks)/")
+        list(FILTER module_sources EXCLUDE REGEX "/Components/BMS/")
+    endif()
     target_sources(finemote_core PRIVATE ${module_sources})
 
     # glob header directories
@@ -122,5 +139,8 @@ if(FINEMOTE_APPLICATION_OWNER STREQUAL "ROOT")
             finemote::core
             finemote::bsp
     )
+    if(FINEMOTE_REFLECTED_URDF)
+        include(cmake/reflected_urdf.cmake)
+    endif()
     finemote_postprocess(${PROJECT_NAME})
 endif()

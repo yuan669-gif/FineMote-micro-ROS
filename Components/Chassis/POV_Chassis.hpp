@@ -11,6 +11,10 @@
 #include "Matrix/matrix.h"
 #include "arm_math.h"
 #include <array>
+#include "SwerveCommand.hpp"
+#ifdef FINEMOTE_AST_APPLICATION
+#include <geometry_msgs/msg/twist.h>
+#endif
 
 using Swerve_t = struct Swerve_t {
     MotorBase* steerMotor;
@@ -42,27 +46,10 @@ public:
     void InverseKinematics(std::array<float, 3>& v) final {
         // Inverse Kinematics
         for (auto& module: modules) {
-            float vx = v[0] - module.ly * v[2];
-            float vy = v[1] + module.lx * v[2];
-            float v = sqrtf(vx * vx + vy * vy);
-            float angle = atan2f(vy, vx) * 180 / PI;
-
-            bool isNegative = false;
-            while (angle + module.zeroPosition - module.steerMotor->GetMultiTurnPosition() > 100) {
-                //100是换向施密特门
-                angle -= 180;
-                isNegative = !isNegative;
-            }
-            while (angle + module.zeroPosition - module.steerMotor->GetMultiTurnPosition() < -100) {
-                angle += 180;
-                isNegative = !isNegative;
-            }
-            if (isNegative) {
-                v = -v;
-            }
-
-            module.steerMotor->SetTarget(angle + module.zeroPosition);
-            module.driveMotor->SetTarget(v / wheelDiameter / PI * 360);
+            const auto command = finemote::swerve_command(v, module.lx, module.ly, module.zeroPosition,
+                wheelDiameter, [&] { return module.steerMotor->GetMultiTurnPosition(); });
+            module.steerMotor->SetTarget(command.angle_degrees);
+            module.driveMotor->SetTarget(command.speed_dps);
         }
     }
 
@@ -74,7 +61,7 @@ public:
             SwerveState() = default;
 
             SwerveState(const float _angle, const float _vel, const float& wheelDiameter, const float angleOffset) {
-                angle = (_angle + angleOffset) / 180.f * PI; //弧度制
+                angle = (_angle - angleOffset) / 180.f * PI; //弧度制
                 float tmp[2] { _vel / 360.f * PI * wheelDiameter * cosf(angle),
                                _vel / 360.f * PI * wheelDiameter * sinf(angle) };
                 vel = tmp;
@@ -93,7 +80,7 @@ public:
                 modules[i].zeroPosition
             );
             states[i] = swerveState_t;
-            Xn[i] = alpha * Xn[i] + (1 - alpha) * Matrixf<3, 1>(this->targetV.data());
+            Xn[i] = alpha * Xn[i] + (1 - alpha) * Matrixf<3, 1>(this->estimatedV.data());
             Jn[i] = matrixf::inv(alpha * alpha * matrixf::inv(Jn[i]) + 0.5 * Q);
             Wn[i] = Jn[i] / N + Hn[i].trans() * B * Hn[i];
             wn[i] = Jn[i] / N * Xn[i] + Hn[i].trans() * B * states[i].vel;
@@ -119,16 +106,68 @@ public:
         this->estimatedV[2] = Xn[0][2][0];
     }
 
+#ifdef FINEMOTE_AST_APPLICATION
+    auto GetRosBinder() {
+        return [this](geometry_msgs__msg__Twist& msg) {
+            taskENTER_CRITICAL();
+            auto velocity = publishedVelocity;
+            taskEXIT_CRITICAL();
+            msg = {};
+            msg.linear.x = velocity[0];
+            msg.linear.y = velocity[1];
+            msg.angular.z = velocity[2];
+        };
+    }
+    void BindCommandSource(std::function<bool(std::array<float, 3>&)> source) {
+        commandSource = std::move(source);
+        InhibitModules(true);
+    }
+
+    bool HasModuleFeedback() const {
+        for (const auto& module : modules)
+            if (!module.steerMotor->HasFeedback() || !module.driveMotor->HasFeedback()) return false;
+        return true;
+    }
+
+#endif
     void Handle() final {
+#ifdef FINEMOTE_AST_APPLICATION
+        const bool permitted = !commandSource || commandSource(this->targetV);
+        if (!permitted) {
+            this->targetV = {};
+            InhibitModules(true);
+        }
+#endif
         ForwardKinematics();
+#ifdef FINEMOTE_AST_APPLICATION
+        taskENTER_CRITICAL();
+        publishedVelocity = this->estimatedV;
+        taskEXIT_CRITICAL();
+#endif
         if (!std::is_same<OdomPolicy, WithoutOdom<3>>::value) {
             this->odom.UpdateOdom(this->estimatedV, this->divisionFactor);
         }
         // Control
+#ifdef FINEMOTE_AST_APPLICATION
+        if (!permitted) return;
+#endif
         InverseKinematics(this->targetV);
+#ifdef FINEMOTE_AST_APPLICATION
+        if (commandSource) InhibitModules(false);
+#endif
     }
 
 private:
+#ifdef FINEMOTE_AST_APPLICATION
+    std::array<float, 3> publishedVelocity{};
+    std::function<bool(std::array<float, 3>&)> commandSource;
+    void InhibitModules(bool inhibit) {
+        for (const auto& module : modules) {
+            module.steerMotor->InhibitMotion(inhibit);
+            module.driveMotor->InhibitMotion(inhibit);
+        }
+    }
+#endif
     std::array<Swerve_t, N> modules;
     std::array<Matrixf<3, 3>, N> Jn;
     std::array<Matrixf<2, 3>, N> Hn;

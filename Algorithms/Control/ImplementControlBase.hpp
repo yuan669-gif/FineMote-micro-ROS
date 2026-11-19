@@ -17,6 +17,7 @@ class ImplementControllerBase: public ControllerBase {
 public:
     ImplementControllerBase() = default;
     virtual ~ImplementControllerBase() = default;
+    virtual void ResetHistory() {}
 
     template<size_t NextInputSize, size_t NextOutputSize>
     void Cascade(ImplementControllerBase<NextInputSize, NextOutputSize>& nextController) {

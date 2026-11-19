@@ -9,6 +9,9 @@
 
 #include "DeviceBase/DeviceBase.hpp"
 #include "Control/ImplementControlBase.hpp"
+#ifdef FINEMOTE_AST_APPLICATION
+#include <atomic>
+#endif
 
 enum class Motor_Ctrl_Type_e : uint8_t {
     Position = 0,
@@ -88,6 +91,17 @@ public:
         state = _state;
     }
 
+#ifdef FINEMOTE_AST_APPLICATION
+    float JointScale() const { return 0.017453292519943295f / params.reductionRatio; }
+    void InhibitMotion(bool inhibit) { inhibited_.store(inhibit); }
+    bool HasFeedback() const { return received_.load() && HAL_GetTick() - feedbackMs_.load() < 250; }
+    void CommitState(const Motor_State_t& sample) {
+        SetState(sample);
+        feedbackMs_.store(HAL_GetTick());
+        received_.store(true);
+    }
+#endif
+
     [[nodiscard]] const Motor_State_t& GetState() {
         return state;
     }
@@ -97,6 +111,11 @@ public:
     }
 
 protected:
+#ifdef FINEMOTE_AST_APPLICATION
+    std::atomic<bool> inhibited_{false};
+    std::atomic<bool> received_{false};
+    std::atomic<uint32_t> feedbackMs_{0};
+#endif
     virtual void SetFeedback() = 0;
 
     float target = 0; //多圈目标，减速后

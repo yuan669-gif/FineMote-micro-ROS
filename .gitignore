@@ -37,3 +37,10 @@ RTE_Components.h
 *.bat
 *.Bak
 *.__i
+
+__pycache__/
+/.dsh_urdf_probe/
+/.dsh_probe.txt
+/description/
+/tmp/
+/_attachment_extract/document.txt

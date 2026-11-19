@@ -23,7 +23,7 @@ void BSP_Setup() {
     HAL_TIM_Base_Start_IT(&TIM_Control);
 
     static MicroROS_UartTransport<5> backend;
-    MicroROS_Manager<>::GetInstance().Start(backend);
+    if (!MicroROS_Manager<>::GetInstance().Start(backend)) Error_Handler();
 }
 
 #ifdef __cplusplus
